@@ -1,59 +1,39 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import datetime, timedelta
 import logging
 from typing import Any
 
-import async_timeout
-import voluptuous as vol
-
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform, UnitOfVolume
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers import (
-    config_validation as cv,
-    device_registry as dr,
-    discovery_flow,
-)
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, UnitOfVolume
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, async_get_current_platform
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.components.recorder.statistics import (
-    async_add_external_statistics,
-    async_import_statistics,
-)
+from homeassistant.components.recorder.statistics import async_import_statistics
 
-from . import const
+from . import AqualiaConfigEntry, const
 from .aqualia_api import AqualiaAPI
 from .util import prepare_data
 
-SCAN_INTERVAL = timedelta(minutes=1)
+SCAN_INTERVAL = timedelta(hours=1)
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
         hass: HomeAssistant,
-        entry: ConfigEntry,
+        entry: AqualiaConfigEntry,
         async_add_entities: AddEntitiesCallback
         ) -> bool:
     """Set up the platform."""
-    session = async_get_clientsession(hass)
-    my_api = AqualiaAPI(session, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD])
+    my_api = entry.runtime_data
 
     device = Consumption(my_api, entry.data[const.MODEL_CONTRACT])
-    async_add_entities(
-        [device]
-    )
+    async_add_entities([device])
     platform = async_get_current_platform()
     platform.async_register_entity_service(
         name=const.SERVICE_RESET_STATISTICS,
@@ -72,7 +52,7 @@ class Consumption(SensorEntity):
         self.contract = contract
         self._attr_native_unit_of_measurement = UnitOfVolume.LITERS
         self._attr_device_class = SensorDeviceClass.WATER
-        self._attr_state_class = SensorStateClass.TOTAL
+        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
         self._name = f'aqualia_{contract[const.MODEL_CONTRACT_INFO][const.MODEL_CONTRACT_NUMBER]}'
         self._state = 0
         self._available = True
@@ -114,8 +94,8 @@ class Consumption(SensorEntity):
         return self._available
 
     @property
-    def state(self) -> str | None:
-        """Return the last measurement of the event."""
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
         return self._state
 
     @property
@@ -143,13 +123,12 @@ class Consumption(SensorEntity):
             metadata = stats[const.STATS_METADATA]
             async_import_statistics(self.hass, metadata, stats[const.STATS_STATISTICS])
             self._last_consumption_value = consumption[const.MODEL_CONSUMPTION_CURVES][-1][const.MODEL_CONSUMPTION_VALUE]
-            self._state = self._last_consumption_value
+            self._state = consumption_sum
             self.attrs[const.MODEL_CONSUMPTION_VALUE]=self._last_consumption_value
             self._last_consumption_sum = consumption_sum
             self.attrs[const.TOTAL_CONSUMPTION_SUM]=self._last_consumption_sum
             self._last_consumption_datetime = last_reported_update
             self.attrs[const.MODEL_DATE_TIME_CONSUMPTION_CURVE]=self._last_consumption_datetime
-            self.last_reset=self._last_consumption_datetime
 
     # https://github.com/klausj1/homeassistant-statistics/blob/main/custom_components/import_statistics/prepare_data.py#L22
     async def async_update(self) -> None:
@@ -164,20 +143,18 @@ class Consumption(SensorEntity):
                 self.entity_id,
                 self._attr_native_unit_of_measurement,
                 consumption[const.MODEL_CONSUMPTION_CURVES],
-                last_consumption=self._state,
+                last_consumption=self._last_consumption_sum,
                 last_update_dt=last_update
                 )
             metadata = stats[const.STATS_METADATA]
             async_import_statistics(self.hass, metadata, stats[const.STATS_STATISTICS])
             self._last_consumption_value = consumption[const.MODEL_CONSUMPTION_CURVES][-1][const.MODEL_CONSUMPTION_VALUE]
-            self._state = self._last_consumption_value
+            self._state = consumption_sum
             self.attrs[const.MODEL_CONSUMPTION_VALUE]=self._last_consumption_value
             self._last_consumption_sum = consumption_sum
             self.attrs[const.TOTAL_CONSUMPTION_SUM]=self._last_consumption_sum
             self._last_consumption_datetime = last_reported_update
             self.attrs[const.MODEL_DATE_TIME_CONSUMPTION_CURVE]=self.last_consumption_datetime
-            self.last_reset=self.last_consumption_datetime
         else:
-            self._state = 0
-            self.last_reset = self.last_consumption_datetime
+            self._state = self._last_consumption_sum
         self._available = True

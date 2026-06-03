@@ -38,11 +38,13 @@ def prepare_data(
     """Prepare data to import the statistics."""
     metadata={
             "has_mean": False,
+            "mean_type": 0,
             "has_sum": True,
             "source": get_source(sensor_id),
             "statistic_id": sensor_id,
             "name": None,
             "unit_of_measurement": sensor_unit,
+            "unit_class": "volume",
         }
     stats = {
         const.STATS_METADATA:metadata,

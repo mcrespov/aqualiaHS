@@ -1,11 +1,20 @@
 {
-  "title":"Aqualia Integration",
+  "title": "Aqualia",
   "config": {
     "step": {
       "user": {
+        "title": "Connect to Aqualia",
+        "description": "Enter your Aqualia Virtual Office credentials.",
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]"
+        }
+      },
+      "contract": {
+        "title": "Select contract",
+        "description": "Select the contract you want to monitor.",
+        "data": {
+          "SupplyAddress": "Supply Address"
         }
       }
     },
@@ -16,19 +25,6 @@
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
-    }
-  },
-  "options":{
-    "step":{
-      "contract":{
-        "title":"Select contract",
-        "data":{
-          "CacCode": "Cac Code",
-          "ContractCode": "Contract Code",
-          "InstallationCode":"Installation Code",
-          "ContractNumber":"Contract Number"
-        }
-      }
     }
   }
 }

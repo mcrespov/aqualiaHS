@@ -18,10 +18,6 @@ type AqualiaConfigEntry = ConfigEntry[AqualiaAPI]  # noqa: F821
 
 async def async_setup_entry(hass: HomeAssistant, entry: AqualiaConfigEntry) -> bool:
     """Set up aqualia from a config entry."""
-    hass.data.setdefault(const.DOMAIN, {})
-    hass.data[const.DOMAIN][entry.entry_id] = entry.data
-    # This will call Entity.set_sleep_timer(sleep_time=VALUE)
-    #Platform.SENSOR.async_register_entity_service("reset_statistics")
     # 1. Create API instance
     session = async_get_clientsession(hass)
     api=AqualiaAPI(session, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD])

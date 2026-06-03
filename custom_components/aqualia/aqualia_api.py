@@ -1,12 +1,11 @@
 """HTTP Client for the Aqualia API."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
 
 from aiohttp import ClientResponse, ClientSession
-import requests
 
 from . import const
 
@@ -23,13 +22,12 @@ class AqualiaAPI:
         self.websession = websession
         self.username = username
         self.password = password
-        self.headers = const.AQUALIA_HEADERS
+        self.headers = const.AQUALIA_HEADERS.copy()
         self.token = ''
         self.token_expiration_date = datetime.now()
 
     async def login(self) ->bool:
         """Get the bearer token if there is no valid one."""
-        return True #for testing
         if self.token == '' or self.token_expiration_date < datetime.now():
             data = {
                 "LoginType": 1,
@@ -51,7 +49,6 @@ class AqualiaAPI:
 
     async def get_contracts(self)->list:
         """Get the contracts for the authenticated user."""
-        return json.loads(const.FAKE_CONTRACTS)[const.MODEL_CONTRACT_DETAILS] #For testing only
         bool_response = await self.login()
         if bool_response:
             url=f'{const.AQUALIA_API_BASE_URL}/{const.AQUALIA_CONTRACTS_PATH}'
@@ -66,7 +63,8 @@ class AqualiaAPI:
 
     async def get_consumption(self,contract,date_from=None) ->dict:
         """Get the consumption from a date until now."""
-        return json.loads(const.FAKE_CONSUMPTION) #For testing only
+        if date_from is None:
+            date_from = datetime.now() - timedelta(days=30)
         if await self.login():
             data={
                 "DateFrom":date_from.strftime("%Y-%m-%dT00:00:00.000Z"),

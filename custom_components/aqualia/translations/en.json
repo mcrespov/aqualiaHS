@@ -1,0 +1,29 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Aqualia",
+        "description": "Enter your Aqualia Virtual Office credentials.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "contract": {
+        "title": "Select contract",
+        "description": "Select the contract you want to monitor.",
+        "data": {
+          "SupplyAddress": "Supply Address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  }
+}
